@@ -1,27 +1,15 @@
-import sys
-from collections import defaultdict
 import random
+from collections import defaultdict
+from maze import Maze
 
 
-class VIMaze:
+class VIMaze(Maze):
     def __init__(self, path):
-        self.maze = self.load_maze(path)
+        super().__init__(path)
         self.states = self.get_all_valid_states()
         self.policy = self.init_policy()
         self.state_value = defaultdict(lambda:0)
         self.next_state_probs = dict()
-
-    def load_maze(self, path):
-        with open(path) as f:
-            line = f.readline().split()
-            n = int(line[0])
-            m = int(line[1])
-            maze = [['x' for j in range(m)] for i in range(n)]
-            for i in range(n):
-                line = f.readline().strip()
-                for (j, c) in enumerate(line):
-                    maze[i][j] = c
-        return maze
 
     def get_all_valid_states(self):
         states = []
@@ -30,17 +18,6 @@ class VIMaze:
                 if self.maze[i][j] != "#" and len(self.get_actions((i, j))) > 0:
                     states.append((i, j))
         return states
-
-    def is_terminal(self, state):
-        return self.maze[state[0]][state[1]] == "E"
-
-    def is_valid_action(self, action):
-        try:
-            # Move within the maze
-            return self.maze[action[0]][action[1]] != '#'
-        except:
-            # Move out of the maze
-            return False
 
     def get_actions(self, state):
         actions = []
@@ -107,18 +84,10 @@ class VIMaze:
         self.next_state_probs[(state, action)] = states_probs
         return states_probs
 
-    def get_reward(self, state):
-        if self.maze[state[0]][state[1]] in [' ', 'S']:
-            return -1
-        elif self.maze[state[0]][state[1]] == 'D':
-            return -50
-        elif self.maze[state[0]][state[1]] == 'E':
-            return 200
-
     def value_iteration(self, discount, eps, max_iter):
         delta = float('inf')
-
         it = 0
+        
         while delta > eps and it < max_iter:
             it += 1
             delta = 0
@@ -139,58 +108,19 @@ class VIMaze:
                     self.state_value[state] = max_value
                     self.policy[state] = best_action
 
-    def step(self, state, action):
-        """
-        Make single step from state with success probability 0.7 and probability
-        0.15 to go sideways
-        """
-        chance = random.random()
-
-        # wants to go up or down
-        up_or_down = action[1] - state[1] == 0
-        
-        if chance < 0.15:
-            if up_or_down:
-                # go east
-                next_state = (state[0], state[1]+1)
-            else:
-                # go south
-                next_state = (state[0]+1, state[1])
-        elif chance < 0.3:
-            if up_or_down:
-                # go west
-                next_state = (state[0], state[1]-1)
-            else:
-                #go north
-                next_state = (state[0]-1, state[1])
-        else:
-            next_state = action
-
-        if self.is_valid_action(next_state):
-            return next_state, self.get_reward(next_state)
-        else:
-            return state, self.get_reward(state)
-
     def traverse(self, start):
         """
         Executes single traversal through the maze while following policy learned
-        by value-iteration and returns the reward
+        by value-iteration and returns the reward and path
         """
+        path = []
+        path.append(start)
+
         state = start
         reward = 0
         while not self.is_terminal(state):
             state, r = self.step(state, self.policy[state])
             reward += r
-        return reward
+            path.append(state)
+        return reward, path
 
-
-if __name__ == '__main__':
-    maze = VIMaze(sys.argv[1])
-    maze.value_iteration(0.999999, 1e-9, 500)
-
-    TRIALS = 1000
-    rewards = []
-    for i in range(TRIALS):
-        rewards.append(maze.traverse((0, 1)))
-    print("Average reward over %d trials: %f" % (TRIALS, sum(rewards) / TRIALS))
-    print("State value of initial state: %f" % (maze.state_value[(0, 1)]))

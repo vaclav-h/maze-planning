@@ -27,8 +27,9 @@ The goal is to navigate from start to goal using up/down/left/right actions.
 ### Implemented algorithms
 * #### FF-Replan
     * `ff_maze.py` contains implementation of FF-Replan algorithm for described maze environments.
-    * Demo usage  ``python3 ff_maze.py path_to_maze_file.txt``
 * #### Value-iteration
     * `vi_maze.py` contains implementation of Value-Iteration for described maze environments
-    * Demo usage ``python3 vi_maze.py path_to_maze_file.txt``
 
+### Usage
+
+``python3 run.py -f [path to maze data file] -m [one of 'ff' and 'vi']``

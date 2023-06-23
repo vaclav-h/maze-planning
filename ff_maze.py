@@ -1,24 +1,9 @@
-import sys
-import random
-from priority_queue import PriorityQueue
+from utils import PriorityQueue
 from collections import defaultdict
+from maze import Maze
 
 
-class FFMaze:
-    def __init__(self, path):
-        self.maze = self.load_maze(path)
-
-    def load_maze(self, path):
-        with open(path) as f:
-            line = f.readline().split()
-            n = int(line[0])
-            m = int(line[1])
-            maze = [['x' for j in range(m)] for i in range(n)]
-            for i in range(n):
-                line = f.readline().strip()
-                for (j, c) in enumerate(line):
-                    maze[i][j] = c
-        return maze
+class FFMaze(Maze):
 
     def get_state_dist(self, state):
         """
@@ -30,25 +15,6 @@ class FFMaze:
             return 50
         elif self.maze[state[0]][state[1]] == 'E':
             return 0
-
-    def get_state_reward(self, state):
-        if self.maze[state[0]][state[1]] in [' ', 'S']:
-            return -1
-        elif self.maze[state[0]][state[1]] == 'D':
-            return -50
-        elif self.maze[state[0]][state[1]] == 'E':
-            return 200
-
-    def is_terminal(self, state):
-        return self.maze[state[0]][state[1]] == "E"
-
-    def is_valid_action(self, action):
-        try:
-            # Move within the maze
-            return self.maze[action[0]][action[1]] != '#'
-        except:
-            # Move out of the maze
-            return False
 
     def expand_state(self, state):
         """
@@ -100,43 +66,15 @@ class FFMaze:
             state = parent[state]
         return plan
 
-    def step(self, state, action):
-        """
-        Make single step from state with success probability 0.7 and probability
-        0.15 to go sideways
-        """
-        chance = random.random()
-
-        # check if he wants to go up or down
-        up_or_down = action[1] - state[1] == 0
-        
-        if chance < 0.15:
-            if up_or_down:
-                # go east
-                next_state = (state[0], state[1]+1)
-            else:
-                # go south
-                next_state = (state[0]+1, state[1])
-        elif chance < 0.3:
-            if up_or_down:
-                # go west
-                next_state = (state[0], state[1]-1)
-            else:
-                #go north
-                next_state = (state[0]-1, state[1])
-        else:
-            next_state = action
-
-        if self.is_valid_action(next_state):
-            return next_state, self.get_state_reward(next_state)
-        else:
-            return state, self.get_state_reward(state)
-
     def traverse(self, start):
         """
         Executes single traversal through the maze using FF-Replan and returns
-        the reward
+        the reward and path
         """
+
+        path = []
+        path.append(start)
+
         reward = 0
         plan = self.find_plan(start)
         state = start
@@ -147,13 +85,5 @@ class FFMaze:
             # If action was not successful => replan
             if state != action:
                 plan = self.find_plan(state)
-        return reward
-
-if __name__ == '__main__':
-    maze = FFMaze(sys.argv[1])
-
-    TRIALS = 100
-    rewards = []
-    for i in range(TRIALS):
-        rewards.append(maze.traverse((0, 1)))
-    print("Average reward over %d trials: %f" % (TRIALS, sum(rewards) / TRIALS))
+            path.append(state)
+        return reward, path
